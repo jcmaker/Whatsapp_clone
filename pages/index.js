@@ -6,7 +6,7 @@ export default function Home() {
     <div>
       <Head>
         <title>WhatsApp</title>
-        <link rel="icon" href="/favicon.ico" />
+        <link rel="icon" href="./whatsapp.png" />
       </Head>
       <Sidebar />
     </div>

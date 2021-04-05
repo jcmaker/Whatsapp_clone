@@ -4,25 +4,38 @@ import ChatIcon from "@material-ui/icons/Chat";
 import MoreVertIcon from "@material-ui/icons/MoreVert";
 import SearchIcon from "@material-ui/icons/Search";
 import * as EmailValidator from "email-validator";
+import { auth, db } from "../firebase";
+import { useAuthState } from "react-firebase-hooks/auth";
 
 function Sidebar() {
+  const [user] = useAuthState(auth);
+  const userChatRef = db
+    .collection("chats")
+    .where("users", "array-contains", user.email);
+
   const createChat = () => {
     const input = prompt(
       "enter an email address for the user you wish to chat with."
     );
-    if (!input) {
-      return null;
-    }
+    if (!input) return null;
 
-    if (EmailValidator.validate(input)) {
+    if (EmailValidator.validate(input) && input !== user.email) {
       //we need to add the chat into the DB 'chats' collection
+      db.collection("chats").add({
+        users: [user.email, input],
+      });
     }
   };
+
+  const chatAlreadyExists = (recipientEmail) => {};
 
   return (
     <Container>
       <Header>
-        <UserAvatar />
+        <div style={{ display: "flex", flexDirection: "row" }}>
+          <UserAvatar />
+          <Button onClick={() => auth.signOut()}>Logout</Button>
+        </div>
 
         <IconContainer>
           <IconButton>
@@ -87,6 +100,7 @@ const UserAvatar = styled(Avatar)`
   :hover {
     opacity: 0.8;
   }
+  margin-right: 4px;
 `;
 
 const IconContainer = styled.div``;
