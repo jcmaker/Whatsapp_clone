@@ -45,7 +45,7 @@ function Sidebar() {
     <Container>
       <Header>
         <div style={{ display: "flex", flexDirection: "row" }}>
-          <UserAvatar />
+          <UserAvatar src={user.photoURL} />
           <Button onClick={() => auth.signOut()}>Logout</Button>
         </div>
 
