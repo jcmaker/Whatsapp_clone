@@ -34,16 +34,6 @@ function Chat({ id, users }) {
 
 export default Chat;
 
-export async function getServerSideProps(context) {
-  const ref = db.collection("chats").doc(context.query.id);
-
-  // PREP the messages on the server
-  const messagesRes = await ref
-    .collection("messages")
-    .order("timestamp", "asc")
-    .get();
-}
-
 const Container = styled.div`
   display: flex;
   align-items: center;
