@@ -5,10 +5,17 @@ import { useRouter } from "next/router";
 import { Avatar, IconButton } from "@material-ui/core";
 import MoreVertIcon from "@material-ui/icons/MoreVert";
 import AttachFileIcon from "@material-ui/icons/AttachFile";
+import InsertEmoticonIcon from "@material-ui/icons/InsertEmoticon";
 import { useCollection } from "react-firebase-hooks/firestore";
+import Message from "./Message";
+import { useState } from "react";
+import firebase from "firebase";
+import getRecipientEmail from "../utils/getRecipientEmail";
+import TimeAgo from "timeago-react";
 
 function ChatScreen({ chat, messages }) {
   const [user] = useAuthState(auth);
+  const [input, setInput] = useState("");
   const router = useRouter();
   const [messagesSnapshot] = useCollection(
     db
@@ -16,6 +23,12 @@ function ChatScreen({ chat, messages }) {
       .doc(router.query.id)
       .collection("messages")
       .orderBy("timestamp", "asc")
+  );
+
+  const [recipientSnapshot] = useCollection(
+    db
+      .collection("users")
+      .where("email", "==", getRecipientEmail(chat.users, user))
   );
 
   const showMessages = () => {
@@ -30,17 +43,60 @@ function ChatScreen({ chat, messages }) {
           }}
         />
       ));
+    } else {
+      return JSON.parse(messages).map((message) => (
+        <Message key={message.id} user={message.user} message={message} />
+      ));
     }
   };
+
+  const sendMessage = (e) => {
+    e.preventDefault();
+
+    db.collection("users").doc(user.uid).set(
+      {
+        lastSeen: firebase.firestore.FieldValue.serverTimestamp(),
+      },
+      { merge: true }
+    );
+
+    db.collection("chats").doc(router.query.id).collection("messages").add({
+      timestamp: firebase.firestore.FieldValue.serverTimestamp(),
+      message: input,
+      user: user.email,
+      photoURL: user.photoURL,
+    });
+
+    setInput("");
+  };
+
+  const recipient = recipientSnapshot?.docs?.[0]?.data();
+  const recipientEmail = getRecipientEmail(chat.users, user);
 
   return (
     <Container>
       <Header>
-        <Avatar />
+        {recipient ? (
+          <Avatar src={recipient?.photoURL} />
+        ) : (
+          <Avatar>{recipientEmail[0][0]}</Avatar>
+        )}
 
         <HeaderInformation>
-          <h3>Email</h3>
-          <p>Last Seen ...</p>
+          <h3>{recipientEmail}</h3>
+          {recipientSnapshot ? (
+            <p>
+              Last active:{" "}
+              {recipient?.lastSeen?.toDate() ? (
+                // <TimeAgo datetime={recipient?.lastSeen?.toDate()} />
+                <TimeAgo datetime={recipient?.lastSeen?.toDate()} />
+              ) : (
+                "Unavailable"
+              )}
+            </p>
+          ) : (
+            <p>Loading last active...</p>
+          )}
         </HeaderInformation>
         <HeaderIcons>
           <IconButton>
@@ -57,6 +113,10 @@ function ChatScreen({ chat, messages }) {
 
       <InputContainer>
         <InsertEmoticonIcon />
+        <Input value={input} onChange={(e) => setInput(e.target.value)} />
+        <button hidden disabled={!input} type="submit" onClick={sendMessage}>
+          send
+        </button>
       </InputContainer>
     </Container>
   );
@@ -65,6 +125,30 @@ function ChatScreen({ chat, messages }) {
 export default ChatScreen;
 
 const Container = styled.div``;
+
+const InputContainer = styled.form`
+  display: flex;
+  align-items: center;
+  padding: 10px;
+  position: sticky;
+  bottom: 0;
+  background-color: white;
+  z-index: 100;
+`;
+
+const Input = styled.input`
+  flex: 1;
+  align-items: center;
+  padding: 20px;
+  border: none;
+  border-radius: 10px;
+  position: sticky;
+  bottom: 0;
+  background-color: whitesmoke;
+  z-index: 100;
+  outline: 0;
+  margin: 0px 15px;
+`;
 
 const Header = styled.div`
   position: sticky;
@@ -96,8 +180,8 @@ const HeaderIcons = styled.div``;
 
 const EndOfMessage = styled.div``;
 
-const MessageContainer = styled.div``;
-
-const InputContainer = styled.div``;
-
-const InsertEmoticonIcon = styled.img``;
+const MessageContainer = styled.div`
+  padding: 30px;
+  background-color: #e5ded8;
+  min-height: 90vh;
+`;
